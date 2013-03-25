@@ -5,6 +5,7 @@
 
 import os
 import sys
+import shutil
 try:
     from collections import OrderedDict as MyDict
 except ImportError:
@@ -70,9 +71,12 @@ def process_csv_list(csvfile):
             print "Error: 4 values expected in line:", line
             print
             sys.exit(1)
+
             
         if lineno:
             d = construct(github_manual)
+            if not 'dummy' in d['github_repository_name']:
+                continue
             print d['clone_destination'] + ',',
             if ospe(d['clone_destination']):
                 print 'exists',
@@ -81,7 +85,10 @@ def process_csv_list(csvfile):
             print
             if 0:
                 print d['clone_cmd']
-                print d['copy_make_cmd']
+            if 1:
+                if ospe(d['github_make_folder_template']):
+                    shutil.copytree(d['github_make_folder_template'], d['make_folder_destination'])
+
 
 
 
