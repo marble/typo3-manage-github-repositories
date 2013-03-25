@@ -90,14 +90,17 @@ def process_csv_list(csvfile):
             if 0:
                 print d['clone_cmd']
             if 1:
+                'setup the .git.make folder'
                 if ospe(d['github_make_folder_template']) and not ospe(d['make_folder_destination']):
                     shutil.copytree(d['github_make_folder_template'], d['make_folder_destination'])
                 for fname in [d['file_conf_py'], d['file_makefile'], d['file_cron_rebuild_sh']]:
+                    print fname
                     f1 = file(fname)
                     data = f1.read()
                     f1.close()
                     for a,b in d['replacements']:
-                        data.replace(a,b)
+                        print a, b
+                        data = data.replace(a,b)
                     f2 = file(fname, "w")
                     f2.write(data)
                     f2.close()
