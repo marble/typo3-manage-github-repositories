@@ -80,14 +80,27 @@ def process_csv_list(csvfile):
             print d['clone_destination'] + ',',
             if ospe(d['clone_destination']):
                 print 'exists',
+                exists = 1
             else:
                 print 'to be created',
+                exists = 0
             print
+            if exists:
+                continue
             if 0:
                 print d['clone_cmd']
             if 1:
-                if ospe(d['github_make_folder_template']):
+                if ospe(d['github_make_folder_template']) and not ospe(d['make_folder_destination']):
                     shutil.copytree(d['github_make_folder_template'], d['make_folder_destination'])
+                for fname in [d['file_conf_py'], d['file_makefile'], d['file_cron_rebuild_sh']]:
+                    f1 = file(fname)
+                    data = f1.read()
+                    f1.close()
+                    for a,b in d['replacements']:
+                        data.replace(a,b)
+                    f2 = file(fname, "w")
+                    f2.write(data)
+                    f2.close()
 
 
 
