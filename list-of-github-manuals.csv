@@ -1,0 +1,7 @@
+github_user, repository_name                       , url_start                     , manual_name_in_url
+marble     , typo3-manage-github-repositories      , MangeGithubRepositories       , typo3cms/drafts
+marble     , typo3-dummy-notes                     , DummyNotes                    , typo3cms/drafts
+marble     , typo3-incoming-notes                  , IncomingNotes                 , typo3cms/drafts
+marble     , typo3-documentation-contribution-guide, DocumentationContributionGuide, typo3cms/drafts
+froemken   , typo3-extbase-guide                   , ExtbaseGuide                  , typo3cms/drafts
+froemken   , typo3-fluid-guide                     , FluidGuide                    , typo3cms/drafts
