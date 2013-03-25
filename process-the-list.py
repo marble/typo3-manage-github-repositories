@@ -8,7 +8,7 @@ import sys
 try:
     from collections import OrderedDict as MyDict
 except ImportError:
-    MyDict = Dict
+    MyDict = dict
 ospe = os.path.exists
 ospj = os.path.join
 
