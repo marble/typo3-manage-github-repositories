@@ -12,6 +12,7 @@ except ImportError:
     MyDict = dict
 ospe = os.path.exists
 ospj = os.path.join
+NL = '\n'
 
 def construct(github_manual):
 
@@ -42,6 +43,9 @@ def construct(github_manual):
 
     d['github_url'] = 'https://github.com'
     d['github_make_folder_template'] = '/home/mbless/HTDOCS/github.com/make-folder-template'
+
+    d['cron_rebuild_included_file'] = '/home/mbless/HTDOCS/git.typo3.org/Documentation/cron_rebuild_included.sh'
+
   
     if d['repository_hoster'] == 'github.com':
         d['clone_source'] = d['github_url'] + '/' + d['github_user'] + '/' + d['github_repository_name']
@@ -52,12 +56,12 @@ def construct(github_manual):
         d['file_conf_py'] = d['make_folder_destination'] + '/conf.py'
         d['file_makefile'] = d['make_folder_destination'] + '/Makefile'
         d['file_cron_rebuild_sh'] = d['make_folder_destination'] + '/cron_rebuild.sh'
-
         d['replacements'] = []
         d['replacements'].append(('GITHUB_USER', d['github_user']))
         d['replacements'].append(('REPOSITORY_NAME', d['github_repository_name']))
         d['replacements'].append(('URL_START', d['url_start']))
         d['replacements'].append(('MANUAL_NAME_FOR_URL', d['manual_name_for_url']))
+        d['request_rebuild_url'] = d['make_folder_destination'] + '/request_rebuild.php'
 
     return d
 
@@ -104,6 +108,13 @@ def process_csv_list(csvfile):
                     f2 = file(fname, "w")
                     f2.write(data)
                     f2.close()
+            if 1:
+                'Allow cron processing'
+                'cron_rebuild_included.sh'
+                f2 = file(d['cron_rebuild_included_file'], 'a')
+                f2.write(d['request_rebuild_url'] + NL)
+                f2.close()
+
 
 
 
