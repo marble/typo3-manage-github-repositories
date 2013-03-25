@@ -1,0 +1,13 @@
+# Settings.yml
+---
+conf.py:
+  ##==========================================
+  ## define configuration data for conf.py as
+  ## "parameter: value" pairs here:
+  ##------------------------------------------
+  todo_include_todos: True
+  copyright: 2013 to now
+  project: Manage Github Repositories
+  version: 0.0
+  release: 0.0.0
+...
