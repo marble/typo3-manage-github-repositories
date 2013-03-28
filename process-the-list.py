@@ -133,4 +133,4 @@ def process_csv_list(csvfile):
 
 if 1 and __name__=="__main__":
 
-    process_csv_list('list-of-github-manuals.csv')
+    process_csv_list('list-of-github-manuals-NOT_VERSIONED.csv')
