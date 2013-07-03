@@ -1,7 +1,7 @@
 #! /usr/bin/python
 # coding: ascii
 
-# process-the-list, mb, 2013-03-25, 2013-03-25
+# process-the-list, mb, 2013-03-25, 2013-03-25, 2013-07-03
 
 import os
 import sys
@@ -131,6 +131,6 @@ def process_csv_list(csvfile):
                 f2.close()
 
 
-if 1 and __name__=="__main__":
+if 0 and __name__=="__main__":
 
     process_csv_list('list-of-github-manuals-NOT_VERSIONED.csv')
