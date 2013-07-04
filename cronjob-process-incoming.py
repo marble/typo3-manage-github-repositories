@@ -1,7 +1,7 @@
 #! /usr/bin/python
 # coding: ascii
 
-# process-incoming-documentation-projects, mb, 2013-07-03, 2013-07-03
+# process-incoming-documentation-projects, mb, 2013-07-03, 2013-07-04
 
 import os
 import sys
@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import codecs
 import re
+import time
 
 try:
     from collections import OrderedDict as MyDict
@@ -19,9 +20,11 @@ HOME_DIR = '/home/mbless'
 CRON_REBUILD_INCLUDED_FILE = '/home/mbless/HTDOCS/git.typo3.org/Documentation/cron_rebuild_included.sh'
 KNOWN_GITHUB_MANUALS_FILE  = '/home/mbless/public_html/services/known-github-manuals.txt'
 ROOT_OF_GITHUB_COM_PROJECTS = '/home/mbless/HTDOCS/github.com/'
-ROOT_OF_GITHUB_COM_PROJECTS = '/home/mbless/HTDOCS/github.com/marble/typo3-manage-github-repositories.git/kannweg/HTDOCS/github.com/'
 FNAME_INFILE = 'incoming-NOT_VERSIONED.txt'
+LOGFILE = 'logfile-NOT_VERSIONED.txt'
 MAKEFOLDER_TEMPLATES = 'makefolder-templates'
+LASTRUN = 'last-run-NOT_VERSIONED.txt'
+MAIN_SEMAPHORE = '/home/mbless/HTDOCS/git.typo3.org/Documentation/REBUILD_REQUESTED'
 KEYS = {
     '1': 'person',
     '2': 'githubuser',
@@ -68,10 +71,25 @@ def install_github_project(params):
             if 1:
                 # Add to list of know github hooks
                 f2 = file(KNOWN_GITHUB_MANUALS_FILE, 'a')
-                f2.write('%s,%s\n' % (params['repositoryurl'], params['request_rebuild_url']))
+                f2.write('%s,%s\n' % (params['repositoryurl'].rstrip('/'), params['request_rebuild_url']))
                 f2.close()
 
-            print '%s/%s: installed' % (params['user'], params['repository'])
+            if 1:
+                # initiate build right away
+                f2 = file(MAIN_SEMAPHORE, 'w')
+                f2.close()
+
+            msg = '%s/%s: installed' % (params['user'], params['repository'])
+
+            if 1:
+                # let that message appear on mail sent by cronjob
+                print msg
+                
+            if 1:
+                # Add line to logfile
+                f2 = file(LOGFILE, 'a')
+                f2.write('%s\n' % msg)
+                f2.close()
                 
        
 
@@ -181,9 +199,7 @@ def process_entry(dataset):
         # print 'BUILDDIR=%s' % params['BUILDDIR']
 
         params['file_cron_rebuild_sh'] = params['t3MakeDir'] + '/cron_rebuild.sh'
-        params['request_rebuild_url']  = params['t3MakeDir'] + '/request_rebuild.php'
-
-
+        params['request_rebuild_url']  = params['t3MakeDir'].replace('/home/mbless/HTDOCS/', 'http://docs.typo3.org/~mbless/') + '/request_rebuild.php'
             
         # print
 
@@ -261,5 +277,9 @@ def process_infile(f1name):
  
 
 if 1 and __name__=="__main__":
-
+    if 1:
+        # touch file LASTRUN
+        f2 = file(LASTRUN, 'w')
+        f2.write(str(time.time()))
+        f2.close()
     process_infile(FNAME_INFILE)
