@@ -1,7 +1,7 @@
 #! /usr/bin/python
 # coding: ascii
 
-# process-incoming-documentation-projects, mb, 2013-07-03, 2013-07-04
+# process-incoming-documentation-projects, mb, 2013-07-03, 2013-07-08
 
 import os
 import sys
@@ -10,6 +10,7 @@ import subprocess
 import codecs
 import re
 import time
+from pprint import pprint
 
 try:
     from collections import OrderedDict as MyDict
@@ -17,11 +18,14 @@ except ImportError:
     MyDict = dict
 
 HOME_DIR = '/home/mbless'
-CRON_REBUILD_INCLUDED_FILE = '/home/mbless/HTDOCS/git.typo3.org/Documentation/cron_rebuild_included.sh'
-KNOWN_GITHUB_MANUALS_FILE  = '/home/mbless/public_html/services/known-github-manuals.txt'
-ROOT_OF_GITHUB_COM_PROJECTS = '/home/mbless/HTDOCS/github.com/'
+CRON_REBUILD_INCLUDED_FILE     = '/home/mbless/HTDOCS/git.typo3.org/Documentation/cron_rebuild_included.sh'
+KNOWN_GITHUB_MANUALS_FILE      = '/home/mbless/public_html/services/known-github-manuals.txt'
+ROOT_OF_GITHUB_COM_PROJECTS    = '/home/mbless/HTDOCS/github.com/'
+ROOT_OF_GIT_TYPO3_ORG_PROJECTS = '/home/mbless/HTDOCS/git.typo3.org/'
+ 
 FNAME_INFILE = 'incoming-NOT_VERSIONED.txt'
 LOGFILE = 'logfile-NOT_VERSIONED.txt'
+SKIPPEDLINES = 'skipped-lines-NOT_VERSIONED.txt'
 MAKEFOLDER_TEMPLATES = 'makefolder-templates'
 LASTRUN = 'last-run-NOT_VERSIONED.txt'
 MAIN_SEMAPHORE = '/home/mbless/HTDOCS/git.typo3.org/Documentation/REBUILD_REQUESTED'
@@ -37,8 +41,9 @@ KEYS = {
 ospe = os.path.exists
 ospj = os.path.join
 NL = '\n'
+globalTimeStr = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
-def install_github_project(params):
+def installGithubProject(params):
     go = True
     if go and ospe(params['t3RepositoryDir']):
         print '%s/%s: t3RepositoryDir already exists' % (params['user'], params['repository'])
@@ -48,18 +53,23 @@ def install_github_project(params):
         go = False
     if go:
         if not ospe(HOME_DIR):
-            print '%s/%s: not on server' % (params['user'], params['repository'])
+            print
+            print '%s/%s: we are not on the server serv123' % (params['user'], params['repository'])
+            for k in ['t3RepositoryUrl', 't3MakeDir', 't3DocumentationDir',
+                      't3BuildDir', 'relpath_to_master_doc', 'request_rebuild_url',
+                      'file_cron_rebuild_sh']:
+                print '%-21s = %s' % (k, params[k])
         else:
             shutil.copytree(MAKEFOLDER_TEMPLATES, params['t3MakeDir'])
             for fname in os.listdir(params['t3MakeDir']):
                 fpath = ospj(params['t3MakeDir'], fname)
                 if os.path.isfile(fpath):
-                    f1 = file(fpath)
+                    f1 = codecs.open(fpath, 'r', 'utf-8')
                     data = f1.read()
                     f1.close()
                     for k, v in params.items():
                         data = data.replace('###%s###' % k, v)
-                    f2 = file(fpath, "w")
+                    f2 = codecs.open(fpath, 'w', 'utf-8')
                     f2.write(data)
                     f2.close()
             if 1:
@@ -75,7 +85,7 @@ def install_github_project(params):
                 f2.close()
 
             if 1:
-                # initiate build right away
+                # initiate build right away (touch the file)
                 f2 = file(MAIN_SEMAPHORE, 'w')
                 f2.close()
 
@@ -92,15 +102,69 @@ def install_github_project(params):
                 f2.close()
                 
        
+def installGitTypo3OrgProject(params):
+    go = True
+    if go and ospe(params['t3RepositoryDir']):
+        print '%s: t3RepositoryDir already exists' % (params['repository'],)
+        go = False
+    if go and ospe(params['t3MakeDir']):
+        print '%s: t3MakeDir already exists' % (params['repository'],)
+        go = False
+    if go:
+        if not ospe(HOME_DIR):
+            print
+            print '%s: we are not on the server serv123' % (params['repository'],)
+            for k in ['t3RepositoryUrl', 't3MakeDir', 't3DocumentationDir',
+                      't3BuildDir', 'relpath_to_master_doc', 'request_rebuild_url',
+                      'file_cron_rebuild_sh']:
+                print '%-21s = %s' % (k, params[k])
+        else:
+            shutil.copytree(MAKEFOLDER_TEMPLATES, params['t3MakeDir'])
+            for fname in os.listdir(params['t3MakeDir']):
+                fpath = ospj(params['t3MakeDir'], fname)
+                if os.path.isfile(fpath):
+                    f1 = codecs.open(fpath, 'r', 'utf-8')
+                    data = f1.read()
+                    f1.close()
+                    for k, v in params.items():
+                        data = data.replace('###%s###' % k, v)
+                    f2 = codecs.open(fpath, 'w', 'utf-8')
+                    f2.write(data)
+                    f2.close()
+            if 1:
+                # Add to cron processing
+                f2 = file(CRON_REBUILD_INCLUDED_FILE, 'a')
+                f2.write(params['file_cron_rebuild_sh'] + NL)
+                f2.close()
 
-def process_entry(dataset):
-    params = {}
-    D = {}
+            if 0:
+                # Add to list of known github manuals
+                f2 = file(KNOWN_GITHUB_MANUALS_FILE, 'a')
+                f2.write('%s,%s\n' % (params['repositoryurl'].rstrip('/'), params['request_rebuild_url']))
+                f2.close()
 
-    for k, v in dataset.items():
-        params[k] = v
+            if 1:
+                # initiate build right away (touch the file)
+                f2 = file(MAIN_SEMAPHORE, 'w')
+                f2.close()
 
-    # check for Github entries
+            msg = '%s: installed' % (params['repository'],)
+
+            if 1:
+                # let that message appear on mail sent by cronjob
+                print msg
+                
+            if 1:
+                # Add line to logfile
+                f2 = file(LOGFILE, 'a')
+                f2.write('%s\n' % msg)
+                f2.close()
+                
+
+def checkIfGithubComRepository(dataset, params=None):
+    if params is None:
+        params = {}
+    installer = None
     pattern = (
         'https://github\.com/'
         '(?P<user>.+?)/'
@@ -113,15 +177,14 @@ def process_entry(dataset):
     if m:
         D = m.groupdict()
         D['reporelpath'] = D['reporelpath'].strip('/')
+
         params['user']          = D['user']
+        params['type']          = 'None'
         params['repository']    = D['repository']
         params['githubrelpath'] = D['githubrelpath']
         params['reporelpath']   = D['reporelpath']
         params['masterdoc']     = D['masterdoc']
-
-        s = dataset['publishurl']
-        s.split('/drafts/github/', 1)
-        
+    
         # given:
         #   https://github.com/user/Project/tree/master/Documentation/Index.rst
         #   https://github.com/netresearch/t3x-contexts_geolocation/blob/master/README.rst
@@ -200,44 +263,163 @@ def process_entry(dataset):
 
         params['file_cron_rebuild_sh'] = params['t3MakeDir'] + '/cron_rebuild.sh'
         params['request_rebuild_url']  = params['t3MakeDir'].replace('/home/mbless/HTDOCS/', 'http://docs.typo3.org/~mbless/') + '/request_rebuild.php'
-            
-        # print
 
-        complete = True
-        for k,v in params.items():
-            if not v:
-                complete = False
-                break
-            
-        if complete:
-            install_github_project(params)
-            
-       
+        installer = installGithubProject
 
-    # handle Non-Github-entry ...
+
+    return installer, params        
+            
+
+def checkIfGitTypo3OrgRepository(dataset, params=None):
+    if params is None:
+        params = {}
+    installer = None
+    # handle TYPO3 official manual
+    # https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+    # https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git/blob/HEAD:/Documentation/Index.rst
     pattern = (
-        'https://SOME_OTHER_DOMAIN\.com/'
-        '(?P<user>.+?)/'
+        'https://git.typo3.org/Documentation/TYPO3/'
+        '(?P<type>.+?)/'
         '(?P<repository>.+?)/'
-        '(?P<githubrelpath>tree/master|blob/master)'
+        '(?P<gittypo3orgrelpath>blob/HEAD:)'
         '(?P<reporelpath>.*)/'
         '(?P<masterdoc>.+\.rst)'
         )
     m = re.match(pattern, dataset['masterdocurl'])
     if m:
-        pass
+        D = m.groupdict()
+        D['reporelpath'] = D['reporelpath'].strip('/')
 
+        params['type']          = D['type']
+        params['repository']    = D['repository']
+        params['gittypo3orgrelpath'] = D['gittypo3orgrelpath']
+        params['reporelpath']   = D['reporelpath']
+        params['masterdoc']     = D['masterdoc']
+    
+        # given:
+        #   https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        #   https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git/blob/HEAD:/Documentation/Index.rst
+        # needed:
+        #   t3DocTeam['relpath_to_master_doc'] = '../Project.git/Documentation/'
+
+        relpath_to_master_doc = ospj('..', D['repository'], D['reporelpath'])
+        relpath_to_master_doc = relpath_to_master_doc.replace('\\', '/')
+        params['relpath_to_master_doc'] = relpath_to_master_doc
+
+        # 1: TYPO3 Documentation Team
+        # 2: 
+        # 3: https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        # 4: https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git/blob/HEAD:/Documentation/Index.rst
+        # 5: http://docs.typo3.org/typo3cms/SecurityGuide/nl/latest
+        # 6: new
+
+        # t3RepositoryUrl    = https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        # t3RepositoryDir    = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        # t3DocumentationDir = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git/Documentation
+        # t3MakeDir          = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.make
+        # t3BuildDir         = /home/mbless/public_html/typo3cms/SecurityGuide/nl/latest
+
+        # t3BuildDir
+        # t3BuildDir=/home/mbless/public_html/typo3cms/SecurityGuide/nl/latest
+        temp = dataset['publishurl'].split('http://docs.typo3.org/',1)
+        if len(temp) == 2:
+            t3BuildDir = ('/home/mbless/public_html/' + temp[1]).rstrip('/')
+        else:
+            t3BuildDir = ''
+        params['t3BuildDir'] = t3BuildDir
+
+        # t3RepositoryDir
+        # t3RepositoryDir=/home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        temp = dataset['repositoryurl'].split('https://git.typo3.org/',1)
+        if len(temp) == 2:
+            t3RepositoryDir = (ROOT_OF_GIT_TYPO3_ORG_PROJECTS + temp[1]).rstrip('/')
+        else:
+            t3RepositoryDir = ''
+        params['t3RepositoryDir'] = t3RepositoryDir
+
+        # t3RepositoryUrl
+        # t3RepositoryUrl=https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        t3RepositoryUrl = dataset['repositoryurl'].rstrip('/')
+        params['t3RepositoryUrl'] = t3RepositoryUrl
+
+        # t3DocumentationDir
+        # t3DocumentationDir=/home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git/Documentation
+        if D['reporelpath']:
+            t3DocumentationDir = t3RepositoryDir + '/' + D['reporelpath']
+        else:
+            t3DocumentationDir = t3RepositoryDir
+        params['t3DocumentationDir'] = t3DocumentationDir
+
+        # t3MakeDir
+        # t3MakeDir=/home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.make
+        t3MakeDir = t3RepositoryDir + '.make'
+        params['t3MakeDir'] = t3MakeDir
+
+        # T3DOCDIR
+        # T3DOCDIR = /home/mbless/HTDOCS/github.com/maholtz/Typoscript.git/Documentation
+        params['T3DOCDIR'] = params['t3DocumentationDir']
+
+        # BUILDDIR
+        # BUILDDIR = /home/mbless/public_html/typo3cms/SecurityGuide/nl/latest
+        params['BUILDDIR'] = params['t3BuildDir']
+
+        params['file_cron_rebuild_sh'] = params['t3MakeDir'] + '/cron_rebuild.sh'
+        params['request_rebuild_url']  = params['t3MakeDir'].replace('/home/mbless/HTDOCS/', 'http://docs.typo3.org/~mbless/') + '/request_rebuild.php'
+
+        #person               = TYPO3 Documentation Team
+        #githubuser           = -
+        #repositoryurl        = https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        #masterdocurl         = https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git/blob/HEAD:/Documentation/Index.rst
+        #publishurl           = http://docs.typo3.org/typo3cms/SecurityGuide/nl/latest/
+        #status               = ACTIVE
+
+        #BUILDDIR             = /home/mbless/public_html/typo3cms/SecurityGuide/nl/latest
+        #T3DOCDIR             = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.git/Documentation
+        #file_cron_rebuild_sh = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.git.make/cron_rebuild.sh
+        #gittypo3orgrelpath   = blob/HEAD:
+        #masterdoc            = Index.rst
+        #relpath_to_master_doc = ../Security.nl_NL.git.git/Documentation
+        #reporelpath          = Documentation
+        #repository           = Security.nl_NL.git
+        #request_rebuild_url  = http://docs.typo3.org/~mbless/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.git.make/request_rebuild.php
+        #t3BuildDir           = /home/mbless/public_html/typo3cms/SecurityGuide/nl/latest
+        #t3DocumentationDir   = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.git/Documentation
+        #t3MakeDir            = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.git.make
+        #t3RepositoryDir      = /home/mbless/HTDOCS/git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git.git
+        #t3RepositoryUrl      = https://git.typo3.org/Documentation/TYPO3/Guide/Security.nl_NL.git
+        #type                 = Guide
+
+        installer = installGitTypo3OrgProject
+
+    return installer, params        
+
+
+def process_entry(dataset):
+    params = {}
+    D = {}
+    installer = None
+    for k, v in dataset.items():
+        params[k] = v
+    for checkDataset in [checkIfGitTypo3OrgRepository, checkIfGithubComRepository]:
+        installer, params = checkDataset(dataset, params)
+        if installer:
+            break
+    if installer:
+        installer(params)
     return
         
 
 def handle_skipped_lines(L):
-    pass
+    f2 = codecs.open(SKIPPEDLINES, 'a', 'utf-8', 'xmlcharrefreplace')
+    for line in L:
+        f2.write('%s\n' % line)
+    f2.close()
 
 def process_infile(f1name):
     if not ospe(f1name):
         f2 = file(f1name, 'w')
         f2.close()
-    f1 = codecs.open(f1name, 'r', 'utf-8', 'xmlcharrefreplace')
+    f1 = codecs.open(f1name, 'r', 'utf-8', 'replace')
     dataset = {}
     linebuf = []
     skipping = False
@@ -280,6 +462,10 @@ if 1 and __name__=="__main__":
     if 1:
         # touch file LASTRUN
         f2 = file(LASTRUN, 'w')
-        f2.write(str(time.time()))
+        f2.write(globalTimeStr)
+        f2.close()
+    if 1:
+        # empty SKIPPED LINES file
+        f2 = file(SKIPPEDLINES, 'w')
         f2.close()
     process_infile(FNAME_INFILE)
